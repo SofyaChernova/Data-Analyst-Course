@@ -1,0 +1,90 @@
+3)
+--host_id – идентификатор хозяина
+--host_since – дата регистрации как хост
+SELECT
+    --toStartOfMonth(CAST(host_since as Date)) не сработает, так как дата может иметь значение null
+    toStartOfMonth(toDateOrNull(host_since)) as month_, --для корректной обработки пустых значений. Теперь это тип данных Date (замена CAST).
+    --toStartOfMonth() получаем месяц регистрации хостов
+    COUNT(DISTINCT host_id) as hosts
+FROM 
+    listings
+GROUP BY month_
+ORDER BY hosts DESC
+LIMIT 5
+
+4)
+SELECT
+    AVG(toInt32OrNull(replaceAll(host_response_rate, '%', ''))) as avg_resp,
+    host_is_superhost
+FROM 
+    (
+    SELECT
+        DISTINCT
+            host_id,
+            host_is_superhost,
+            host_response_rate
+    FROM listings 
+    ) as sub
+GROUP BY host_is_superhost
+LIMIT 5
+
+5)
+SELECT
+    groupArray(id),
+    host_id,
+    AVG(toFloat32OrNull(replaceRegexpAll(price, '[$,]', ''))) as price_avg
+FROM
+    listings
+GROUP BY host_id
+ORDER BY price_avg DESC, host_id DESC
+LIMIT 100
+
+6)
+--Немного усложним предыдущую задачу, и посчитаем разницу между максимальной и минимальной установленной ценой у каждого хозяина. В качестве ответа укажите идентификатор хоста, у которого разница оказалась наибольшей. 
+
+--Немногоhost_id – идентификатор хозяина
+--id – идентификатор жилья
+--price – цена за ночь в конкретном месте
+SELECT 
+    host_id,
+    MIN(toFloat32OrNull(replaceRegexpAll(price, '[$,]', ''))) as min_price,
+    MAX(toFloat32OrNull(replaceRegexpAll(price, '[$,]', ''))) as max_price,
+    max_price - min_price as diff
+FROM listings
+GROUP BY host_id
+ORDER BY diff DESC
+LIMIT 10
+
+7)
+--Отлично! В каких частях города средняя стоимость за ночь является наиболее низкой? 
+
+--Сгруппируйте данные по neighbourhood_cleansed и посчитайте среднюю цену за ночь в каждом районе. В качестве ответа введите название места, где средняя стоимость за ночь ниже всего.
+
+--price – цена за ночь
+--neighbourhood_cleansed – район/округ города
+SELECT 
+    AVG(toFloat64OrNull(replaceRegexpAll(price, '[$,]', ''))) as price_avg,
+    neighbourhood_cleansed
+FROM listings 
+GROUP BY neighbourhood_cleansed
+ORDER BY price_avg
+LIMIT 100
+
+10)
+--В каких районах Берлина средняя площадь жилья, которое сдаётся целиком, является наибольшей? Отсортируйте по среднему и выберите топ-3. 
+
+--neighbourhood_cleansed – район
+--square_feet – площадь
+--room_type – тип (нужный – 'Entire home/apt')
+
+SELECT
+    neighbourhood_cleansed,
+    AVG(toFloat32OrNull(square_feet) as square_feet) as square_feet_avg
+FROM listings
+WHERE room_type = 'Entire home/apt'
+GROUP BY neighbourhood_cleansed
+ORDER BY square_feet_avg DESC
+LIMIT 3
+
+
+

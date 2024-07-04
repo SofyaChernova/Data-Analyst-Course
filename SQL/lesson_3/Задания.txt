@@ -1,0 +1,64 @@
+3)
+SELECT 
+    ev.DeviceID AS DeviceID,
+    dev.UserID AS UserID
+
+FROM events AS ev
+
+LEFT JOIN devices AS dev 
+
+ON ev.DeviceID = dev.DeviceID
+
+ORDER BY ev.DeviceID DESC
+LIMIT 100
+
+4) Пользователи пришедшие из какого источника совершили больше всего покупок?
+SELECT 
+    Source,
+    COUNT(*) as sell_Count
+FROM
+    (SELECT
+        checks.UserID AS UserID,
+        devices.DeviceID
+    FROM checks
+    INNER JOIN devices 
+    ON checks.UserID = devices.UserID
+    ) AS l
+
+INNER JOIN installs 
+
+ON l.DeviceID = installs.DeviceID
+GROUP BY Source
+ORDER BY sell_Count DESC
+LIMIT 100
+
+5) Теперь выясним, сколько всего уникальных юзеров совершили покупки в нашем приложении.
+SELECT 
+   Source,
+   count(DISTINCT UserID) as count_user_id
+FROM
+    (SELECT
+        checks.UserID AS UserID,
+        devices.DeviceID
+    FROM checks
+    INNER JOIN devices 
+    ON checks.UserID = devices.UserID
+    ) AS l
+
+INNER JOIN installs 
+
+ON l.DeviceID = installs.DeviceID
+GROUP BY Source
+LIMIT 100
+
+10) 
+SELECT 
+    Platform,
+    count(DISTINCT DeviceID) as DeviceID
+FROM installs as i 
+LEFT SEMI JOIN events as ev 
+    ON i.DeviceID = ev.DeviceID
+GROUP BY Platform
+LIMIT 5
+
+
