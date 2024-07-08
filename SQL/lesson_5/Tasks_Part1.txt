@@ -154,3 +154,90 @@ GROUP BY listing_id
 HAVING reviewers > avg_reviewers
 ORDER BY listing_id
 LIMIT 1
+
+
+5)
+--Теперь задача! Используйте таблицу checks и разделите всех покупателей на сегменты:
+
+--NB! Правые границы берутся не включительно, например, чек в 10 рублей будет относиться к сегменту С
+
+--А — средний чек покупателя менее 5 ₽
+--B — средний чек покупателя от 5-10 ₽
+--C — средний чек покупателя от 10-20 ₽
+--D — средний чек покупателя от 20 ₽
+--Отсортируйте результирующую таблицу по возрастанию UserID и укажите сегмент четвертого пользователя.
+WITH avg_checks AS (
+    SELECT 
+        AVG(Rub) AS avg_rub,
+        UserID
+    FROM checks
+    GROUP BY UserID
+    )
+SELECT 
+    UserID,
+    avg_rub,
+    CASE
+        WHEN avg_rub < 5 THEN 'A'
+        WHEN avg_rub >= 5 and avg_rub < 10 THEN 'B'
+        WHEN avg_rub >= 10 and avg_rub < 20 THEN 'C'
+        ELSE 'D'
+    END AS segment
+FROM avg_checks
+ORDER BY UserID
+LIMIT 10
+
+6)
+--Используйте предыдущий запрос как подзапрос и посчитайте, сколько клиентов приходится на каждый сегмент и сколько доходов он приносит. 
+--Отсортируйте результат по убыванию суммы доходов на сегмент и в качестве ответа укажите наибольшую сумму.
+WITH avg_checks_segment AS (
+    SELECT 
+        UserID,
+        avg_rub,
+        CASE
+            WHEN avg_rub < 5 THEN 'A'
+            WHEN avg_rub >= 5 and avg_rub < 10 THEN 'B'
+            WHEN avg_rub >= 10 and avg_rub < 20 THEN 'C'
+            ELSE 'D'
+        END AS segment
+    FROM (
+        SELECT 
+            AVG(Rub) AS avg_rub,
+            UserID
+        FROM checks
+        GROUP BY UserID
+        )
+    ORDER BY UserID
+)
+SELECT 
+    COUNT(UserID),
+    segment,
+    SUM(Rub) as sum_rub
+FROM checks as c
+INNER JOIN  avg_checks_segment as a
+ON c.UserID = a.UserID
+GROUP BY segment
+ORDER BY sum_rub DESC
+
+7)
+--Вернемся к таблице AirBnb. Предположим, что в выборе жилья нас интересует только два параметра: наличие кухни (kitchen) и гибкой системы отмены (flexible), причем первый в приоритете.
+
+--Создайте с помощью оператора CASE колонку с обозначением группы, в которую попадает жилье из таблицы listings:
+
+--'good', если в удобствах (amenities) присутствует кухня и система отмены (cancellation_policy) гибкая
+--'ok', если в удобствах есть кухня, но система отмены не гибкая
+--'not ok' во всех остальных случаях
+--Результат отсортируйте по новой колонке по возрастанию, установите ограничение в 5 строк, в качестве ответа укажите host_id первой строки.
+
+--Обратите внимание, что cancellation_policy - это отдельная колонка, по ней необходимо смотреть систему отмены
+SELECT  
+    amenities,
+    cancellation_policy,
+    host_id,
+    CASE
+        WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen']) and cancellation_policy = 'flexible' THEN 'good'
+        WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen']) and cancellation_policy <> 'flexible' THEN 'ok'
+        ELSE 'not ok'
+    END AS comfort
+FROM listings
+ORDER BY comfort
+LIMIT 5
